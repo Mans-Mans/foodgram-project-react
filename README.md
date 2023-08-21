@@ -1,2 +1,2 @@
 # praktikum_new_diplom
-Check actions
+Check action

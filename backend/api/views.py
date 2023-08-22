@@ -16,8 +16,8 @@ from .models import (Favorite, Follow, Ingredient, IngredientsInRecipe, Recipe,
                      ShoppingCart, Tag)
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (FollowSerializer, IngredientSerializer,
-                          IngredientsInRecipe, RecipeCreateSerializer,
-                          RecipeMiniFieldSerializer, RecipeReadSerializer,
+                          RecipeCreateSerializer, RecipeMiniFieldSerializer,
+                          RecipeReadSerializer,
                           TagSerializer, UserSerializer)
 
 

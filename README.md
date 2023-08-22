@@ -131,6 +131,6 @@ python manage.py import
 * https://mans-foodgram.sytes.net/signin - страница авторизации
 * https://mansur.sytes.net/signup - страница регистрации
 * https://mansur.sytes.net/cats/add - страница добавления котика на сайт
-* https://mansur.sytes.net/cats/(id_котика) - информация о конкретном коти
+* https://mansur.sytes.net/cats/(id_котика) - информация о конкретном кои
 
 ### Автор проекта - Миндугулов Мансур

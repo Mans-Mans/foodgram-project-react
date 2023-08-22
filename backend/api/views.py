@@ -17,8 +17,7 @@ from .models import (Favorite, Follow, Ingredient, IngredientsInRecipe, Recipe,
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (FollowSerializer, IngredientSerializer,
                           RecipeCreateSerializer, RecipeMiniFieldSerializer,
-                          RecipeReadSerializer,
-                          TagSerializer, UserSerializer)
+                          RecipeReadSerializer, TagSerializer, UserSerializer)
 
 
 class UserViewSet(UserViewSet):

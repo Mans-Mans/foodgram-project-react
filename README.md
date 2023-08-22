@@ -127,10 +127,10 @@ python manage.py import
 ```
 
 ### Примеры запросов на сайте :
-* https://mans-foodgram.sytes.net - главная страница, видны все котики
+* https://mans-foodgram.sytes.net - главная страница с рецептами
 * https://mans-foodgram.sytes.net/signin - страница авторизации
-* https://mansur.sytes.net/signup - страница регистрации
-* https://mansur.sytes.net/cats/add - страница добавления котика на сайт
-* https://mansur.sytes.net/cats/(id_котика) - информация о конкретном кои
+* https://mans-foodgram.sytes.net/signup - страница регистрации
+* https://mans-foodgram.sytes.net/subscriptions - страница ваших подписок
+* https://mans-foodgram.sytes.net/recipes/create - страница создания рецепта
 
 ### Автор проекта - Миндугулов Мансур

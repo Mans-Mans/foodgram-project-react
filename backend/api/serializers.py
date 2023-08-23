@@ -3,12 +3,11 @@ import base64
 import webcolors
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
+from recipes.models import (Favorite, Ingredient, IngredientsInRecipe, Recipe,
+                            ShoppingCart, Tag)
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
-
-from recipes.models import (Favorite, Ingredient, IngredientsInRecipe, Recipe,
-                            ShoppingCart, Tag)
 from users.models import User
 
 MIN_COOKING_TIME = 1

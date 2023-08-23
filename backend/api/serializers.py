@@ -6,10 +6,14 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
+
+from recipes.models import (Favorite, Ingredient, IngredientsInRecipe, Recipe,
+                            ShoppingCart, Tag)
 from users.models import User
 
-from .models import (Favorite, Follow, Ingredient, IngredientsInRecipe, Recipe,
-                     ShoppingCart, Tag)
+MIN_COOKING_TIME = 1
+MAX_COOKING_TIME = 600
+MIN_AMOUNT_INGREDIENTS = 0
 
 
 class Hex2NameColor(serializers.Field):
@@ -50,9 +54,7 @@ class UserSerializer(UserSerializer):
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         if (request and request.user.is_authenticated):
-            return Follow.objects.filter(
-                user=request.user,
-                following=obj).exists()
+            return obj.following.exists()
         return False
 
 
@@ -74,17 +76,21 @@ class CreateUserSerializer(UserCreateSerializer):
         )
 
     def validate(self, data):
-        username = data.get('username')
-        email = data.get('email')
-        if (User.objects.filter(username=username).exists()
-                and User.objects.get(username=username).email != email):
+        username = User.objects.filter(
+            username=data.get('username')).first()
+        email = User.objects.filter(
+            email=data.get('email')).first()
+        if username is None and email is not None:
+            raise serializers.ValidationError(
+                'Пользователь с такой почтой уже зарегистрирован'
+            )
+        if username is not None and email is None:
             raise serializers.ValidationError(
                 'Пользователь с таким именем уже зарегистрирован'
             )
-        if (User.objects.filter(email=email).exists()
-                and User.objects.get(email=email).username != username):
+        if username is not None and email is not None:
             raise serializers.ValidationError(
-                'Пользователь с такой почтой уже зарегистрирован'
+                'Пользователь с таким именем и почтой уже зарегистрирован'
             )
         return data
 
@@ -117,9 +123,7 @@ class FollowSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         if (request and request.user.is_authenticated):
-            return Follow.objects.filter(
-                user=request.user,
-                following=obj).exists()
+            return obj.following.exists()
         return False
 
     def get_recipes(self, obj):
@@ -202,21 +206,15 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
-        if request:
-            current_user = request.user
-            if current_user.is_authenticated:
-                return Favorite.objects.filter(
-                    user=current_user, recipe=obj).exists()
-            return False
+        if (request is not None and request.user.is_authenticated):
+            return obj.recipe_favorite.exists()
+        return False
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
-        if request:
-            current_user = request.user
-            if current_user.is_authenticated:
-                return ShoppingCart.objects.filter(
-                    user=current_user, recipe=obj).exists()
-            return False
+        if (request is not None and request.user.is_authenticated):
+            return obj.recipe_shop_cart.exists()
+        return False
 
     class Meta:
         model = Recipe
@@ -252,20 +250,23 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def validate(self, data):
-        if Recipe.objects.filter(
-            text=data['text'],
-            name=data['name'],
-            cooking_time=data['cooking_time']
-        ).exists():
+        recipe_name = Recipe.objects.filter(
+            name=data['name']).first()
+        recipe_text = Recipe.objects.filter(
+            text=data['text']).first()
+        recipe_cooking_time = Recipe.objects.filter(
+            cooking_time=data['cooking_time']).first()
+        if (recipe_name is not None and recipe_text is not None
+                and recipe_cooking_time is not None):
             raise serializers.ValidationError(
                 'Такой рецепт уже есть!')
         return data
 
     def validate_cooking_time(self, cooking_time):
-        if cooking_time < 1:
+        if cooking_time < MIN_COOKING_TIME:
             raise serializers.ValidationError(
                 'Время готовки должно быть больше 1 минуты!')
-        if cooking_time > 600:
+        if cooking_time > MAX_COOKING_TIME:
             raise serializers.ValidationError(
                 'Время готовки не должно быть больше 10 часов!')
         return cooking_time
@@ -275,15 +276,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         for ingredient in ingredients:
             if ingredient in ing_list:
                 raise ValidationError('Ингридиенты должны быть уникальны!')
-            if int(ingredient['amount']) <= 0:
+            if int(ingredient['amount']) <= MIN_AMOUNT_INGREDIENTS:
                 raise ValidationError('Количество должно быть больше 0!')
             ing_list.append(ingredient)
         return ingredients
 
-    def create(self, validated_data):
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(**validated_data)
+    def ingredients_and_tags_for_recipe(self, recipe, ingredients, tags):
         recipe.tags.set(tags)
         for ingredient in ingredients:
             amount = ingredient['amount']
@@ -293,6 +291,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 ingredient=current_ingredient,
                 amount=amount
             )
+
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+        recipe = Recipe.objects.create(**validated_data)
+        self.ingredients_and_tags_for_recipe(recipe, ingredients, tags)
         return recipe
 
     def update(self, instance, validated_data):
@@ -300,20 +304,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         instance.tags.clear()
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        instance.tags.set(tags)
         instance.image = validated_data.get('image', instance.image)
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
         instance.cooking_time = validated_data.get(
             'cooking_time', instance.cooking_time)
-        for ingredient in ingredients:
-            amount = ingredient['amount']
-            current_ingredient = Ingredient.objects.get(id=ingredient['id'])
-            IngredientsInRecipe.objects.create(
-                recipe=instance,
-                ingredient=current_ingredient,
-                amount=amount
-            )
+        self.ingredients_and_tags_for_recipe(instance, ingredients, tags)
         instance.save()
         return instance
 

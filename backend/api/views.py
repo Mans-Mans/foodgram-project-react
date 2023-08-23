@@ -9,12 +9,13 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
+
+from recipes.models import (Favorite, Follow, Ingredient, IngredientsInRecipe,
+                            Recipe, ShoppingCart, Tag)
+from recipes.permissions import IsAuthorOrReadOnly
 from users.models import User
 
 from .filters import IngredientFilter, RecipeFilter
-from .models import (Favorite, Follow, Ingredient, IngredientsInRecipe, Recipe,
-                     ShoppingCart, Tag)
-from .permissions import IsAuthorOrReadOnly
 from .serializers import (FollowSerializer, IngredientSerializer,
                           RecipeCreateSerializer, RecipeMiniFieldSerializer,
                           RecipeReadSerializer, TagSerializer, UserSerializer)

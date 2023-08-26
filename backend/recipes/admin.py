@@ -40,6 +40,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return obj.recipe_favorite.count()
     in_favorites_amount.short_description = 'Кол-во добавлений в избранное'
 
+
 class TagAdmin(admin.ModelAdmin):
     """Админка тэгов."""
     list_display = ('pk', 'name', 'color', 'slug')

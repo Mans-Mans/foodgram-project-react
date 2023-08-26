@@ -23,8 +23,8 @@ class RecipeAdmin(admin.ModelAdmin):
                     'in_favorites_amount')
     list_editable = ('name', 'author')
     readonly_fields = ('in_favorites_amount',)
-    search_fields = ('name', 'author')
     list_filter = ('name', 'author', 'tags')
+    search_fields = ('name', )
     empty_value_display = '-пусто-'
     inlines = [
         IngredientsInRecipeInline,
@@ -38,7 +38,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def in_favorites_amount(self, obj):
         return obj.recipe_favorite.count()
-
+    in_favorites_amount.short_description = 'Кол-во добавлений в избранное'
 
 class TagAdmin(admin.ModelAdmin):
     """Админка тэгов."""

@@ -4,7 +4,6 @@ import webcolors
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from recipes.models import (Favorite, Ingredient, IngredientsInRecipe, Recipe,
@@ -13,7 +12,7 @@ from users.models import User
 
 MIN_COOKING_TIME = 1
 MAX_COOKING_TIME = 600
-MIN_AMOUNT_INGREDIENTS = 0
+MIN_AMOUNT_INGREDIENTS = 1
 
 
 class Hex2NameColor(serializers.Field):
@@ -191,6 +190,13 @@ class AddIngredientToRecipeSerializer(serializers.ModelSerializer):
         model = IngredientsInRecipe
         fields = ('id', 'amount')
 
+    def validate_amount(self, amount):
+        if amount < MIN_AMOUNT_INGREDIENTS:
+            raise serializers.ValidationError(
+                'Количество ингредиента должно быть больше или равно 1!'
+            )
+        return amount
+
 
 class RecipeReadSerializer(serializers.ModelSerializer):
     """Сеарилизатор для показа рецепта."""
@@ -239,6 +245,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'ingredients', 'image', 'text',
             'cooking_time'
         )
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Recipe.objects.all(),
+                fields=('name', 'text', 'cooking_time'),
+                message='Такой рецепт уже есть!'
+            )
+        ]
 
     def to_representation(self, instance):
         serializer = RecipeReadSerializer(
@@ -250,16 +263,14 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def validate(self, data):
-        recipe_name = Recipe.objects.filter(
-            name=data['name']).first()
-        recipe_text = Recipe.objects.filter(
-            text=data['text']).first()
-        recipe_cooking_time = Recipe.objects.filter(
-            cooking_time=data['cooking_time']).first()
-        if (recipe_name is not None and recipe_text is not None
-                and recipe_cooking_time is not None):
-            raise serializers.ValidationError(
-                'Такой рецепт уже есть!')
+        ingredients = data['ingredients']
+        ing_list = []
+        for ingredient in ingredients:
+            if ingredient['id'] in ing_list:
+                raise serializers.ValidationError(
+                    'Ингридиенты не должны повторяться!'
+                )
+            ing_list.append(ingredient['id'])
         return data
 
     def validate_cooking_time(self, cooking_time):
@@ -270,16 +281,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Время готовки не должно быть больше 10 часов!')
         return cooking_time
-
-    def validate_ingredients(self, ingredients):
-        ing_list = []
-        for ingredient in ingredients:
-            if ingredient in ing_list:
-                raise ValidationError('Ингридиенты должны быть уникальны!')
-            if int(ingredient['amount']) <= MIN_AMOUNT_INGREDIENTS:
-                raise ValidationError('Количество должно быть больше 0!')
-            ing_list.append(ingredient)
-        return ingredients
 
     def ingredients_and_tags_for_recipe(self, recipe, ingredients, tags):
         recipe.tags.set(tags)
